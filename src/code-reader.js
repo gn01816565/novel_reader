@@ -632,3 +632,118 @@ document.addEventListener('keydown', (e) => {
         toggleInput();
     }
 });
+
+// ==================== 搜尋功能 ====================
+
+/**
+ * 搜尋小說
+ */
+async function searchNovel() {
+    const keyword = document.getElementById('searchKeyword').value.trim();
+    const resultsContainer = document.getElementById('searchResults');
+
+    if (!keyword) {
+        alert('請輸入小說名稱');
+        return;
+    }
+
+    // 顯示載入中
+    resultsContainer.style.display = 'block';
+    resultsContainer.innerHTML = '<div style="color: #858585; padding: 8px;">正在搜尋...</div>';
+
+    try {
+        const platform = platformManager.getCurrentPlatform();
+        const results = await platform.search(keyword);
+
+        if (results.length === 0) {
+            resultsContainer.innerHTML = '<div style="color: #858585; padding: 8px;">沒有找到相關結果</div>';
+            return;
+        }
+
+        // 顯示搜尋結果
+        let html = '<div style="color: #858585; margin-bottom: 8px;">搜尋結果（點擊查看章節）:</div>';
+        results.forEach((book, index) => {
+            html += `
+                <div style="padding: 6px; margin-bottom: 4px; background-color: #3c3c3c; border-radius: 2px; cursor: pointer; hover: background-color: #4c4c4c;"
+                     onclick="showChapterList('${escapeHtml(book.bookUrl)}', '${escapeHtml(book.title)}')">
+                    <div style="color: #d4d4d4; font-weight: bold;">${escapeHtml(book.title)}</div>
+                    ${book.author ? `<div style="color: #858585; font-size: 10px;">作者: ${escapeHtml(book.author)}</div>` : ''}
+                    ${book.latestChapter ? `<div style="color: #858585; font-size: 10px;">最新: ${escapeHtml(book.latestChapter)}</div>` : ''}
+                </div>
+            `;
+        });
+        resultsContainer.innerHTML = html;
+
+    } catch (error) {
+        console.error('搜尋錯誤:', error);
+        resultsContainer.innerHTML = `<div style="color: #f48771; padding: 8px;">搜尋失敗: ${escapeHtml(error.message)}</div>`;
+    }
+}
+
+/**
+ * 顯示章節目錄
+ */
+async function showChapterList(bookUrl, bookTitle) {
+    const container = document.getElementById('chapterListContainer');
+
+    // 顯示載入中
+    container.style.display = 'block';
+    container.innerHTML = '<div style="color: #858585; padding: 8px;">正在載入章節目錄...</div>';
+
+    try {
+        const chapters = await platformManager.getChapterList(bookUrl);
+
+        if (chapters.length === 0) {
+            container.innerHTML = '<div style="color: #858585; padding: 8px;">沒有找到章節</div>';
+            return;
+        }
+
+        // 顯示章節目錄（只顯示前100章，避免太多）
+        const displayChapters = chapters.slice(0, 100);
+        let html = `<div style="color: #858585; margin-bottom: 8px;">《${escapeHtml(bookTitle)}》章節目錄 (共${chapters.length}章，顯示前100章):</div>`;
+
+        displayChapters.forEach(chapter => {
+            html += `
+                <div style="padding: 4px 6px; margin-bottom: 2px; background-color: #3c3c3c; border-radius: 2px; cursor: pointer;"
+                     onclick="loadChapterFromSearch('${escapeHtml(chapter.chapterUrl)}')">
+                    <span style="color: #d4d4d4;">${escapeHtml(chapter.chapterTitle)}</span>
+                </div>
+            `;
+        });
+
+        if (chapters.length > 100) {
+            html += '<div style="color: #858585; padding: 8px; font-size: 10px;">更多章節請使用「上/下一章」按鈕導航</div>';
+        }
+
+        container.innerHTML = html;
+
+        // 儲存完整章節列表到全域變數（用於之後的導航）
+        window.fullChapterList = chapters;
+
+    } catch (error) {
+        console.error('獲取章節目錄錯誤:', error);
+        container.innerHTML = `<div style="color: #f48771; padding: 8px;">載入失敗: ${escapeHtml(error.message)}</div>`;
+    }
+}
+
+/**
+ * 從搜尋結果載入章節
+ */
+async function loadChapterFromSearch(chapterUrl) {
+    // 填入 URL 並分析
+    document.getElementById('currentUrl').value = chapterUrl;
+
+    // 分析 URL 結構
+    const info = analyzeUrl(chapterUrl);
+    if (info) {
+        currentChapterInfo = info;
+        updateChapterInfo(`已識別：${info.patternName} | 章節 ${info.chapterId}`);
+    }
+
+    // 抓取章節內容
+    await fetchChapter(chapterUrl);
+
+    // 隱藏搜尋結果和章節列表
+    document.getElementById('searchResults').style.display = 'none';
+    document.getElementById('chapterListContainer').style.display = 'none';
+}

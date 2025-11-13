@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>text_processor.php - MyBank</title>
     <link rel="stylesheet" href="code-reader.css">
+    <script src="platforms/biquge_platform.js"></script>
+    <script src="platforms/platform_manager.js"></script>
 </head>
 <body>
     <!-- VS Code 標籤欄 (雙擊可切換輸入框) -->
@@ -18,13 +20,30 @@
     <!-- 控制面板 -->
     <div class="control-panel" id="controlPanel">
         <div style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
-            <div style="display: flex; gap: 8px; font-size: 11px; color: #858585;">
-                <span>📖 智能導航：貼上第一章 URL → 點「分析並抓取」→ 之後可用「上/下一章」按鈕自動換章</span>
+            <!-- 搜尋區塊（新功能） -->
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <span style="font-size: 11px; color: #858585; white-space: nowrap;">🔍 搜尋:</span>
+                <input type="text" id="searchKeyword" placeholder="輸入小說名稱搜尋..."
+                       style="flex: 1; background-color: #3c3c3c; color: #d4d4d4; border: 1px solid #3c3c3c; padding: 6px; font-family: inherit; font-size: 12px;"
+                       onkeypress="if(event.key==='Enter')searchNovel()">
+                <button onclick="searchNovel()" style="white-space: nowrap; padding: 6px 15px;">搜尋</button>
             </div>
-            <div style="display: flex; gap: 8px;">
-                <input type="text" id="currentUrl" placeholder="貼上小說章節 URL（例：https://m.biquge.tw/book/1281700/78890835.html）"
-                       style="flex: 1; background-color: #3c3c3c; color: #d4d4d4; border: 1px solid #3c3c3c; padding: 6px; font-family: inherit; font-size: 12px;">
-                <button onclick="analyzeAndFetch()" style="white-space: nowrap;">分析並抓取</button>
+
+            <!-- 搜尋結果 -->
+            <div id="searchResults" style="display: none; max-height: 120px; overflow-y: auto; background-color: #2d2d2d; padding: 8px; border-radius: 2px; font-size: 11px;"></div>
+
+            <!-- 章節目錄 -->
+            <div id="chapterListContainer" style="display: none; max-height: 150px; overflow-y: auto; background-color: #2d2d2d; padding: 8px; border-radius: 2px; font-size: 11px;"></div>
+
+            <div style="border-top: 1px solid #3c3c3c; padding-top: 8px;">
+                <div style="display: flex; gap: 8px; font-size: 11px; color: #858585;">
+                    <span>📖 或直接貼上章節 URL:</span>
+                </div>
+                <div style="display: flex; gap: 8px; margin-top: 4px;">
+                    <input type="text" id="currentUrl" placeholder="貼上小說章節 URL（例：https://m.biquge.tw/book/1281700/78890835.html）"
+                           style="flex: 1; background-color: #3c3c3c; color: #d4d4d4; border: 1px solid #3c3c3c; padding: 6px; font-family: inherit; font-size: 12px;">
+                    <button onclick="analyzeAndFetch()" style="white-space: nowrap;">分析並抓取</button>
+                </div>
             </div>
             <textarea id="novelInput" placeholder="或直接貼上小說內容..." style="min-height: 60px; width: 100%;"></textarea>
         </div>
