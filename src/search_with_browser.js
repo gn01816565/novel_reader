@@ -31,7 +31,8 @@ const cookieFile = '/tmp/novel_cookies/biquge_cookies.json';
             '--disable-accelerated-2d-canvas',
             '--disable-gpu',
             '--window-size=1920,1080',
-        ]
+        ],
+        executablePath: '/usr/bin/google-chrome-stable'
     });
 
     try {
