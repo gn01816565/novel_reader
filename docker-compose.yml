@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  novel-reader:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: novel-reader-app
+    ports:
+      - "9090:80"
+    volumes:
+      # 挂载源代码目录以支持开发时的热重载
+      - ./src:/var/www/html
+      # 持久化 cookie 存储
+      - novel-cookies:/tmp/novel_cookies
+    environment:
+      # 设置时区
+      - TZ=Asia/Taipei
+      # PHP 配置
+      - PHP_MEMORY_LIMIT=256M
+      - PHP_MAX_EXECUTION_TIME=300
+    restart: unless-stopped
+    networks:
+      - novel-reader-network
+
+volumes:
+  # 持久化 cookie 数据
+  novel-cookies:
+    driver: local
+
+networks:
+  novel-reader-network:
+    driver: bridge
