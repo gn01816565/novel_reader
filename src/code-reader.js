@@ -115,28 +115,123 @@ function generateUrl(info, offset) {
     return newUrl;
 }
 
-// 假程式碼模板
+// 假程式碼模板（大幅擴充以提高程式碼比例）
 const fakeCodeTemplates = [
-    '<span class="keyword">function</span> <span class="function">processText</span>(<span class="variable">$content</span>) {',
-    '    <span class="keyword">return</span> <span class="function">trim</span>(<span class="variable">$content</span>);',
+    // 函數定義
+    '<span class="keyword">function</span> <span class="function">processData</span>(<span class="variable">$input</span>, <span class="variable">$options</span> = []) {',
+    '    <span class="keyword">if</span> (<span class="function">empty</span>(<span class="variable">$input</span>)) {',
+    '        <span class="keyword">return</span> <span class="keyword">null</span>;',
+    '    }',
+    '    <span class="keyword">return</span> <span class="function">array_filter</span>(<span class="variable">$input</span>, <span class="keyword">function</span>(<span class="variable">$item</span>) {',
+    '        <span class="keyword">return</span> !<span class="function">empty</span>(<span class="variable">$item</span>);',
+    '    });',
     '}',
     '',
-    '<span class="keyword">class</span> <span class="function">TextHandler</span> {',
-    '    <span class="keyword">private</span> <span class="variable">$data</span>;',
+    // 類別定義
+    '<span class="keyword">class</span> <span class="function">DataProcessor</span> {',
+    '    <span class="keyword">private</span> <span class="variable">$config</span>;',
+    '    <span class="keyword">private</span> <span class="variable">$cache</span> = [];',
     '    ',
-    '    <span class="keyword">public function</span> <span class="function">__construct</span>() {',
-    '        <span class="variable">$this</span>-><span class="variable">data</span> = [];',
+    '    <span class="keyword">public function</span> <span class="function">__construct</span>(<span class="variable">$config</span> = []) {',
+    '        <span class="variable">$this</span>-><span class="variable">config</span> = <span class="function">array_merge</span>(<span class="variable">$this</span>-><span class="function">getDefaultConfig</span>(), <span class="variable">$config</span>);',
+    '    }',
+    '    ',
+    '    <span class="keyword">protected function</span> <span class="function">getDefaultConfig</span>() {',
+    '        <span class="keyword">return</span> [',
+    '            <span class="string">\'timeout\'</span> => <span class="number">30</span>,',
+    '            <span class="string">\'retry\'</span> => <span class="number">3</span>,',
+    '            <span class="string">\'encoding\'</span> => <span class="string">\'UTF-8\'</span>',
+    '        ];',
     '    }',
     '}',
     '',
-    '<span class="keyword">if</span> (<span class="variable">$result</span> !== <span class="keyword">null</span>) {',
-    '    <span class="comment">// Process valid data</span>',
+    // 條件判斷
+    '<span class="keyword">if</span> (<span class="function">isset</span>(<span class="variable">$data</span>[<span class="string">\'status\'</span>]) && <span class="variable">$data</span>[<span class="string">\'status\'</span>] === <span class="string">\'success\'</span>) {',
+    '    <span class="variable">$result</span> = <span class="variable">$this</span>-><span class="function">processSuccess</span>(<span class="variable">$data</span>);',
+    '} <span class="keyword">else</span> {',
+    '    <span class="variable">$this</span>-><span class="function">logError</span>(<span class="string">\'Invalid status\'</span>);',
+    '    <span class="keyword">return</span> <span class="keyword">false</span>;',
     '}',
     '',
-    '<span class="variable">$config</span> = [',
-    '    <span class="string">\'encoding\'</span> => <span class="string">\'UTF-8\'</span>,',
-    '    <span class="string">\'mode\'</span> => <span class="string">\'strict\'</span>',
-    '];',
+    // Try-Catch 區塊
+    '<span class="keyword">try</span> {',
+    '    <span class="variable">$connection</span> = <span class="keyword">new</span> <span class="function">DatabaseConnection</span>(<span class="variable">$config</span>);',
+    '    <span class="variable">$result</span> = <span class="variable">$connection</span>-><span class="function">query</span>(<span class="variable">$sql</span>);',
+    '} <span class="keyword">catch</span> (<span class="function">Exception</span> <span class="variable">$e</span>) {',
+    '    <span class="function">error_log</span>(<span class="variable">$e</span>-><span class="function">getMessage</span>());',
+    '    <span class="keyword">throw</span> <span class="keyword">new</span> <span class="function">RuntimeException</span>(<span class="string">\'Database error\'</span>);',
+    '}',
+    '',
+    // 迴圈
+    '<span class="keyword">foreach</span> (<span class="variable">$items</span> <span class="keyword">as</span> <span class="variable">$key</span> => <span class="variable">$value</span>) {',
+    '    <span class="keyword">if</span> (<span class="function">is_array</span>(<span class="variable">$value</span>)) {',
+    '        <span class="variable">$items</span>[<span class="variable">$key</span>] = <span class="variable">$this</span>-><span class="function">sanitize</span>(<span class="variable">$value</span>);',
+    '    }',
+    '}',
+    '',
+    // 陣列操作
+    '<span class="variable">$filtered</span> = <span class="function">array_map</span>(<span class="keyword">function</span>(<span class="variable">$item</span>) {',
+    '    <span class="keyword">return</span> [',
+    '        <span class="string">\'id\'</span> => <span class="variable">$item</span>[<span class="string">\'id\'</span>],',
+    '        <span class="string">\'timestamp\'</span> => <span class="function">time</span>(),',
+    '        <span class="string">\'processed\'</span> => <span class="keyword">true</span>',
+    '    ];',
+    '}, <span class="variable">$rawData</span>);',
+    '',
+    // Switch 語句
+    '<span class="keyword">switch</span> (<span class="variable">$type</span>) {',
+    '    <span class="keyword">case</span> <span class="string">\'json\'</span>:',
+    '        <span class="keyword">return</span> <span class="function">json_encode</span>(<span class="variable">$data</span>);',
+    '    <span class="keyword">case</span> <span class="string">\'xml\'</span>:',
+    '        <span class="keyword">return</span> <span class="variable">$this</span>-><span class="function">toXml</span>(<span class="variable">$data</span>);',
+    '    <span class="keyword">default</span>:',
+    '        <span class="keyword">return</span> <span class="function">serialize</span>(<span class="variable">$data</span>);',
+    '}',
+    '',
+    // 靜態方法
+    '<span class="keyword">public static function</span> <span class="function">getInstance</span>() {',
+    '    <span class="keyword">if</span> (<span class="keyword">self</span>::<span class="variable">$instance</span> === <span class="keyword">null</span>) {',
+    '        <span class="keyword">self</span>::<span class="variable">$instance</span> = <span class="keyword">new</span> <span class="keyword">self</span>();',
+    '    }',
+    '    <span class="keyword">return</span> <span class="keyword">self</span>::<span class="variable">$instance</span>;',
+    '}',
+    '',
+    // 驗證函數
+    '<span class="keyword">protected function</span> <span class="function">validate</span>(<span class="variable">$input</span>) {',
+    '    <span class="variable">$rules</span> = [',
+    '        <span class="string">\'required\'</span> => [<span class="string">\'name\'</span>, <span class="string">\'email\'</span>],',
+    '        <span class="string">\'email\'</span> => [<span class="string">\'email\'</span>]',
+    '    ];',
+    '    <span class="keyword">return</span> <span class="variable">$this</span>-><span class="variable">validator</span>-><span class="function">check</span>(<span class="variable">$input</span>, <span class="variable">$rules</span>);',
+    '}',
+    '',
+    // 資料庫查詢
+    '<span class="variable">$query</span> = <span class="variable">$this</span>-><span class="variable">db</span>-><span class="function">table</span>(<span class="string">\'users\'</span>)',
+    '    -><span class="function">where</span>(<span class="string">\'status\'</span>, <span class="string">\'active\'</span>)',
+    '    -><span class="function">orderBy</span>(<span class="string">\'created_at\'</span>, <span class="string">\'DESC\'</span>)',
+    '    -><span class="function">limit</span>(<span class="number">10</span>)',
+    '    -><span class="function">get</span>();',
+    '',
+    // API 呼叫
+    '<span class="variable">$response</span> = <span class="variable">$this</span>-><span class="variable">httpClient</span>-><span class="function">post</span>(<span class="variable">$endpoint</span>, [',
+    '    <span class="string">\'headers\'</span> => [<span class="string">\'Authorization\'</span> => <span class="string">\'Bearer \'</span> . <span class="variable">$token</span>],',
+    '    <span class="string">\'json\'</span> => <span class="variable">$payload</span>,',
+    '    <span class="string">\'timeout\'</span> => <span class="number">30</span>',
+    ']);',
+    '',
+    // 快取處理
+    '<span class="keyword">if</span> (<span class="variable">$this</span>-><span class="variable">cache</span>-><span class="function">has</span>(<span class="variable">$key</span>)) {',
+    '    <span class="keyword">return</span> <span class="variable">$this</span>-><span class="variable">cache</span>-><span class="function">get</span>(<span class="variable">$key</span>);',
+    '}',
+    '<span class="variable">$data</span> = <span class="variable">$this</span>-><span class="function">fetchFromDatabase</span>(<span class="variable">$key</span>);',
+    '<span class="variable">$this</span>-><span class="variable">cache</span>-><span class="function">put</span>(<span class="variable">$key</span>, <span class="variable">$data</span>, <span class="number">3600</span>);',
+    '',
+    // 日誌記錄
+    '<span class="variable">$this</span>-><span class="variable">logger</span>-><span class="function">info</span>(<span class="string">\'Processing request\'</span>, [',
+    '    <span class="string">\'user_id\'</span> => <span class="variable">$userId</span>,',
+    '    <span class="string">\'ip\'</span> => <span class="variable">$_SERVER</span>[<span class="string">\'REMOTE_ADDR\'</span>],',
+    '    <span class="string">\'timestamp\'</span> => <span class="function">date</span>(<span class="string">\'Y-m-d H:i:s\'</span>)',
+    ']);',
 ];
 
 // 分析 URL 並抓取內容
@@ -394,9 +489,9 @@ function convertToCode() {
     codeLines.push('<span class="comment"> */</span>');
     codeLines.push('');
 
-    // 隨機插入假程式碼
-    const insertFakeCode = () => {
-        const numLines = Math.floor(Math.random() * 3) + 1;
+    // 隨機插入假程式碼（大幅增加行數以達到 70% 程式碼比例）
+    const insertFakeCode = (minLines = 5, maxLines = 12) => {
+        const numLines = Math.floor(Math.random() * (maxLines - minLines + 1)) + minLines;
         for (let i = 0; i < numLines; i++) {
             const template = fakeCodeTemplates[Math.floor(Math.random() * fakeCodeTemplates.length)];
             codeLines.push(template);
@@ -404,37 +499,44 @@ function convertToCode() {
         codeLines.push('');
     };
 
+    // 開頭先插入大量假程式碼
+    insertFakeCode(8, 15);
+
     // 處理每個段落
     paragraphs.forEach((para, index) => {
-        // 每隔幾段插入假程式碼
-        if (index > 0 && index % 3 === 0) {
-            insertFakeCode();
-        }
-
         // 將段落分成句子
         const sentences = para.match(/[^。！？.!?]+[。！？.!?]*/g) || [para];
 
         sentences.forEach((sentence, sentIndex) => {
-            const formatType = Math.random();
+            // 每 1-2 句就插入大量假程式碼（提高比例到 70%）
+            if (sentIndex > 0 && sentIndex % 2 === 0) {
+                insertFakeCode(6, 10);
+            }
 
-            if (formatType < 0.4) {
-                // 單行註解格式
-                codeLines.push(`<span class="comment">// ${escapeHtml(sentence)}</span>`);
-            } else if (formatType < 0.7) {
-                // 字串變數格式
-                const varName = ['$text', '$content', '$message', '$data', '$info'][Math.floor(Math.random() * 5)];
-                codeLines.push(`<span class="variable">${varName}</span> = <span class="string">"${escapeHtml(sentence)}"</span>;`);
-            } else {
-                // 多行註解格式
-                codeLines.push(`<span class="comment">/* ${escapeHtml(sentence)} */</span>`);
+            // 小說內容只佔少數（30%）
+            // 隨機決定這句是否要顯示（讓小說內容更稀疏）
+            const showSentence = Math.random() < 0.35;  // 只有 35% 的句子會顯示
+
+            if (showSentence) {
+                const formatType = Math.random();
+
+                if (formatType < 0.5) {
+                    // 單行註解格式（改為行內註解更不明顯）
+                    codeLines.push(`<span class="variable">$status</span> = <span class="function">check</span>(); <span class="comment">// ${escapeHtml(sentence)}</span>`);
+                } else {
+                    // 字串變數格式（拆成更短的片段）
+                    const varName = ['$log', '$msg', '$note', '$desc', '$meta'][Math.floor(Math.random() * 5)];
+                    codeLines.push(`<span class="variable">${varName}</span> = <span class="string">"${escapeHtml(sentence)}"</span>;`);
+                }
             }
         });
 
-        codeLines.push('');
+        // 每個段落後插入大量假程式碼
+        insertFakeCode(7, 12);
     });
 
-    // 結尾加入假程式碼
-    insertFakeCode();
+    // 結尾加入大量假程式碼
+    insertFakeCode(10, 15);
 
     // 渲染到頁面
     renderCode(codeLines);
