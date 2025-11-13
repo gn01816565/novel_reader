@@ -1,0 +1,232 @@
+/* 基礎樣式重置 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    background-color: #1e1e1e;
+    color: #d4d4d4;
+    overflow: hidden;
+}
+
+/* VS Code 頂部標籤欄 */
+.tab-bar {
+    background-color: #2d2d2d;
+    height: 35px;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid #1e1e1e;
+    cursor: pointer;
+}
+
+.tab-bar:hover {
+    background-color: #2a2a2a;
+}
+
+.tab {
+    background-color: #1e1e1e;
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-right: 1px solid #2d2d2d;
+    font-size: 13px;
+}
+
+.tab-icon {
+    color: #519aba;
+}
+
+/* 控制面板 */
+.control-panel {
+    background-color: #252526;
+    padding: 10px;
+    border-bottom: 1px solid #1e1e1e;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.control-panel button {
+    background-color: #0e639c;
+    color: #fff;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 2px;
+    cursor: pointer;
+    font-size: 12px;
+    font-family: inherit;
+}
+
+.control-panel button:hover {
+    background-color: #1177bb;
+}
+
+.control-panel textarea {
+    flex: 1;
+    background-color: #3c3c3c;
+    color: #d4d4d4;
+    border: 1px solid #3c3c3c;
+    padding: 6px;
+    font-family: inherit;
+    font-size: 12px;
+    resize: vertical;
+    min-height: 60px;
+}
+
+.toggle-input {
+    background-color: #37373d;
+    font-size: 11px;
+    padding: 4px 8px;
+}
+
+/* 隱藏輸入面板 */
+.control-panel.hidden {
+    display: none;
+}
+
+/* 章節導航欄 */
+.chapter-nav {
+    background-color: #252526;
+    padding: 8px 15px;
+    border-bottom: 1px solid #1e1e1e;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+}
+
+.chapter-nav button {
+    background-color: #0e639c;
+    color: #fff;
+    border: none;
+    padding: 5px 15px;
+    border-radius: 2px;
+    cursor: pointer;
+    font-size: 11px;
+}
+
+.chapter-nav button:hover {
+    background-color: #1177bb;
+}
+
+.chapter-nav button:disabled {
+    background-color: #37373d;
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.chapter-info {
+    color: #858585;
+    font-size: 11px;
+}
+
+.chapter-nav.hidden {
+    display: none;
+}
+
+/* 編輯器容器 */
+.editor-container {
+    display: flex;
+    height: calc(100vh - 35px - 61px);
+}
+
+/* 行號區域 */
+.line-numbers {
+    background-color: #1e1e1e;
+    color: #858585;
+    padding: 20px 10px;
+    text-align: right;
+    user-select: none;
+    font-size: 14px;
+    line-height: 1.6;
+    min-width: 50px;
+    border-right: 1px solid #1e1e1e;
+}
+
+/* 程式碼區域 */
+.code-area {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.code-line {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+/* 語法高亮 */
+.comment {
+    color: #6a9955;
+    font-style: italic;
+}
+
+.string {
+    color: #ce9178;
+}
+
+.keyword {
+    color: #569cd6;
+}
+
+.variable {
+    color: #9cdcfe;
+}
+
+.function {
+    color: #dcdcaa;
+}
+
+.operator {
+    color: #d4d4d4;
+}
+
+.number {
+    color: #b5cea8;
+}
+
+/* 快速切換按鈕 */
+.quick-toggle {
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    width: 30px;
+    height: 30px;
+    background-color: #007acc;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0.3;
+    transition: opacity 0.3s;
+    font-size: 16px;
+    z-index: 1000;
+}
+
+.quick-toggle:hover {
+    opacity: 1;
+}
+
+/* 滾動條樣式 */
+.code-area::-webkit-scrollbar {
+    width: 10px;
+}
+
+.code-area::-webkit-scrollbar-track {
+    background: #1e1e1e;
+}
+
+.code-area::-webkit-scrollbar-thumb {
+    background: #424442;
+}
+
+.code-area::-webkit-scrollbar-thumb:hover {
+    background: #4e4e4e;
+}
