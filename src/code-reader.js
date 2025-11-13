@@ -2,6 +2,180 @@
 let urlPattern = null;
 let currentChapterInfo = null;
 
+// ==================== 平台管理系統 ====================
+
+/**
+ * 筆趣閣平台模組
+ */
+class BiqugePlatform {
+    constructor() {
+        this.name = '筆趣閣';
+        this.id = 'biquge';
+        this.domain = 'biquge.tw';
+        this.searchUrl = 'https://www.biquge.tw/search.php';
+        this.mobileSearchUrl = 'https://m.biquge.tw/search.php';
+    }
+
+    async search(keyword) {
+        const response = await fetch('search_novel.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `platform=biquge&action=search&keyword=${encodeURIComponent(keyword)}`
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            return result.data;
+        } else {
+            throw new Error(result.error || '搜尋失敗');
+        }
+    }
+
+    async getBookInfo(bookUrl) {
+        const response = await fetch('search_novel.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `platform=biquge&action=getBookInfo&url=${encodeURIComponent(bookUrl)}`
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            return result.data;
+        } else {
+            throw new Error(result.error || '獲取書籍資訊失敗');
+        }
+    }
+
+    async getChapterList(bookUrl) {
+        const response = await fetch('search_novel.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `platform=biquge&action=getChapterList&url=${encodeURIComponent(bookUrl)}`
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            return result.data;
+        } else {
+            throw new Error(result.error || '獲取章節目錄失敗');
+        }
+    }
+
+    async getChapterContent(chapterUrl) {
+        const response = await fetch('fetch_novel.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `url=${encodeURIComponent(chapterUrl)}`
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            return result.content;
+        } else {
+            throw new Error(result.error || '獲取章節內容失敗');
+        }
+    }
+
+    isValidUrl(url) {
+        return url.includes('biquge');
+    }
+
+    extractBookId(bookUrl) {
+        const match = bookUrl.match(/\/book\/(\d+)/);
+        return match ? match[1] : null;
+    }
+}
+
+/**
+ * 平台管理器
+ */
+class PlatformManager {
+    constructor() {
+        this.platforms = new Map();
+        this.currentPlatform = null;
+    }
+
+    register(platform) {
+        this.platforms.set(platform.id, platform);
+        console.log(`平台已註冊: ${platform.name} (${platform.id})`);
+    }
+
+    getPlatform(platformId) {
+        const platform = this.platforms.get(platformId);
+        if (!platform) {
+            throw new Error(`平台不存在: ${platformId}`);
+        }
+        return platform;
+    }
+
+    setCurrentPlatform(platformId) {
+        this.currentPlatform = this.getPlatform(platformId);
+        console.log(`切換到平台: ${this.currentPlatform.name}`);
+    }
+
+    getCurrentPlatform() {
+        if (!this.currentPlatform) {
+            const firstPlatform = this.platforms.values().next().value;
+            if (firstPlatform) {
+                this.currentPlatform = firstPlatform;
+            } else {
+                throw new Error('沒有可用的平台');
+            }
+        }
+        return this.currentPlatform;
+    }
+
+    getAllPlatforms() {
+        return Array.from(this.platforms.values()).map(platform => ({
+            id: platform.id,
+            name: platform.name,
+            domain: platform.domain
+        }));
+    }
+
+    detectPlatform(url) {
+        for (const platform of this.platforms.values()) {
+            if (platform.isValidUrl(url)) {
+                return platform;
+            }
+        }
+        return null;
+    }
+
+    async search(keyword) {
+        const platform = this.getCurrentPlatform();
+        return await platform.search(keyword);
+    }
+
+    async getBookInfo(bookUrl) {
+        const platform = this.detectPlatform(bookUrl) || this.getCurrentPlatform();
+        return await platform.getBookInfo(bookUrl);
+    }
+
+    async getChapterList(bookUrl) {
+        const platform = this.detectPlatform(bookUrl) || this.getCurrentPlatform();
+        return await platform.getChapterList(bookUrl);
+    }
+
+    async getChapterContent(chapterUrl) {
+        const platform = this.detectPlatform(chapterUrl) || this.getCurrentPlatform();
+        return await platform.getChapterContent(chapterUrl);
+    }
+}
+
+// 初始化平台管理器
+const platformManager = new PlatformManager();
+platformManager.register(new BiqugePlatform());
+platformManager.setCurrentPlatform('biquge');
+
 // URL 規則解析器
 const urlPatterns = {
     // 筆趣閣手機版：https://m.biquge.tw/book/1281700/78890835.html
