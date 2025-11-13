@@ -821,6 +821,24 @@ async function searchNovel() {
         return;
     }
 
+    // 檢查是否有正在閱讀的章節（搜尋前提醒）
+    const currentUrl = document.getElementById('currentUrl').value.trim();
+    if (currentUrl) {
+        const confirmMsg = '⚠️ 搜尋新書會覆蓋目前的閱讀進度\n\n' +
+                          '目前章節：' + (currentChapterInfo?.chapterId ? `章節 ${currentChapterInfo.chapterId}` : currentUrl) + '\n\n' +
+                          '選擇操作：\n' +
+                          '• 確定 = 繼續搜尋\n' +
+                          '• 取消 = 先加入書籤';
+
+        const shouldContinue = confirm(confirmMsg);
+
+        if (!shouldContinue) {
+            // 使用者選擇先加入書籤
+            addBookmark();
+            return;
+        }
+    }
+
     // 顯示載入中
     resultsContainer.style.display = 'block';
     resultsContainer.innerHTML = '<div style="color: #858585; padding: 8px;">正在搜尋...</div>';
@@ -920,4 +938,259 @@ async function loadChapterFromSearch(chapterUrl) {
     // 隱藏搜尋結果和章節列表
     document.getElementById('searchResults').style.display = 'none';
     document.getElementById('chapterListContainer').style.display = 'none';
+
+    // 加入閱讀歷史
+    addToHistory(chapterUrl);
+}
+
+// ==================== 書籤功能 ====================
+
+/**
+ * 加入書籤
+ */
+function addBookmark() {
+    const url = document.getElementById('currentUrl').value.trim();
+    if (!url) {
+        alert('目前沒有正在閱讀的章節');
+        return;
+    }
+
+    // 提示輸入書籤名稱
+    const bookTitle = prompt('請輸入書籤名稱（書名）:', '');
+    if (!bookTitle) return;
+
+    const chapterTitle = prompt('請輸入章節名稱:', `章節 ${currentChapterInfo?.chapterId || '未知'}`);
+    if (!chapterTitle) return;
+
+    const bookmark = {
+        id: Date.now(),
+        bookTitle: bookTitle,
+        chapterTitle: chapterTitle,
+        url: url,
+        addedAt: new Date().toISOString(),
+        chapterInfo: currentChapterInfo
+    };
+
+    // 儲存書籤
+    const bookmarks = getBookmarks();
+    bookmarks.unshift(bookmark); // 加到最前面
+    localStorage.setItem('novelBookmarks', JSON.stringify(bookmarks));
+
+    alert('✅ 已加入書籤！');
+
+    // 如果書籤面板開啟，刷新顯示
+    const panel = document.getElementById('bookmarkPanel');
+    if (panel.style.display !== 'none') {
+        showBookmarks();
+    }
+}
+
+/**
+ * 獲取所有書籤
+ */
+function getBookmarks() {
+    const data = localStorage.getItem('novelBookmarks');
+    return data ? JSON.parse(data) : [];
+}
+
+/**
+ * 切換書籤面板
+ */
+function toggleBookmarks() {
+    const panel = document.getElementById('bookmarkPanel');
+    const historyPanel = document.getElementById('historyPanel');
+
+    // 關閉歷史面板
+    historyPanel.style.display = 'none';
+
+    if (panel.style.display === 'none') {
+        showBookmarks();
+        panel.style.display = 'block';
+    } else {
+        panel.style.display = 'none';
+    }
+}
+
+/**
+ * 顯示書籤列表
+ */
+function showBookmarks() {
+    const panel = document.getElementById('bookmarkPanel');
+    const bookmarks = getBookmarks();
+
+    if (bookmarks.length === 0) {
+        panel.innerHTML = '<div style="color: #858585; padding: 8px;">📑 還沒有書籤，點擊 ⭐ 加入書籤</div>';
+        return;
+    }
+
+    let html = '<div style="color: #858585; margin-bottom: 8px; font-weight: bold;">📑 我的書籤 (共 ' + bookmarks.length + ' 個)</div>';
+
+    bookmarks.forEach(bookmark => {
+        const date = new Date(bookmark.addedAt).toLocaleDateString('zh-TW');
+        html += `
+            <div style="display: flex; align-items: center; padding: 6px; margin-bottom: 4px; background-color: #3c3c3c; border-radius: 2px;">
+                <div style="flex: 1; cursor: pointer;" onclick="loadBookmark('${bookmark.id}')">
+                    <div style="color: #d4d4d4; font-weight: bold;">📚 ${escapeHtml(bookmark.bookTitle)}</div>
+                    <div style="color: #858585; font-size: 10px;">└ ${escapeHtml(bookmark.chapterTitle)} (${date})</div>
+                </div>
+                <button onclick="deleteBookmark(${bookmark.id})" style="background-color: #f48771; color: white; border: none; padding: 2px 6px; border-radius: 2px; cursor: pointer; font-size: 10px;">刪除</button>
+            </div>
+        `;
+    });
+
+    panel.innerHTML = html;
+}
+
+/**
+ * 載入書籤
+ */
+async function loadBookmark(bookmarkId) {
+    const bookmarks = getBookmarks();
+    const bookmark = bookmarks.find(b => b.id === bookmarkId);
+
+    if (!bookmark) {
+        alert('書籤不存在');
+        return;
+    }
+
+    // 填入 URL
+    document.getElementById('currentUrl').value = bookmark.url;
+
+    // 恢復章節資訊
+    if (bookmark.chapterInfo) {
+        currentChapterInfo = bookmark.chapterInfo;
+        updateChapterInfo(`${bookmark.bookTitle} - ${bookmark.chapterTitle}`);
+    }
+
+    // 抓取章節內容
+    await fetchChapter(bookmark.url);
+
+    // 關閉書籤面板
+    document.getElementById('bookmarkPanel').style.display = 'none';
+}
+
+/**
+ * 刪除書籤
+ */
+function deleteBookmark(bookmarkId) {
+    if (!confirm('確定要刪除這個書籤嗎？')) return;
+
+    const bookmarks = getBookmarks();
+    const filtered = bookmarks.filter(b => b.id !== bookmarkId);
+    localStorage.setItem('novelBookmarks', JSON.stringify(filtered));
+
+    showBookmarks();
+}
+
+// ==================== 閱讀歷史功能 ====================
+
+/**
+ * 加入閱讀歷史
+ */
+function addToHistory(url) {
+    if (!url) return;
+
+    const history = getHistory();
+
+    // 避免重複
+    const existingIndex = history.findIndex(h => h.url === url);
+    if (existingIndex !== -1) {
+        history.splice(existingIndex, 1);
+    }
+
+    const item = {
+        url: url,
+        title: currentChapterInfo?.chapterId ? `章節 ${currentChapterInfo.chapterId}` : '未知章節',
+        readAt: new Date().toISOString(),
+        chapterInfo: currentChapterInfo
+    };
+
+    history.unshift(item);
+
+    // 只保留最近 50 條
+    if (history.length > 50) {
+        history.splice(50);
+    }
+
+    localStorage.setItem('novelHistory', JSON.stringify(history));
+}
+
+/**
+ * 獲取閱讀歷史
+ */
+function getHistory() {
+    const data = localStorage.getItem('novelHistory');
+    return data ? JSON.parse(data) : [];
+}
+
+/**
+ * 切換歷史面板
+ */
+function toggleHistory() {
+    const panel = document.getElementById('historyPanel');
+    const bookmarkPanel = document.getElementById('bookmarkPanel');
+
+    // 關閉書籤面板
+    bookmarkPanel.style.display = 'none';
+
+    if (panel.style.display === 'none') {
+        showHistory();
+        panel.style.display = 'block';
+    } else {
+        panel.style.display = 'none';
+    }
+}
+
+/**
+ * 顯示閱讀歷史
+ */
+function showHistory() {
+    const panel = document.getElementById('historyPanel');
+    const history = getHistory();
+
+    if (history.length === 0) {
+        panel.innerHTML = '<div style="color: #858585; padding: 8px;">📜 還沒有閱讀歷史</div>';
+        return;
+    }
+
+    let html = '<div style="color: #858585; margin-bottom: 8px; font-weight: bold;">📜 閱讀歷史 (最近 ' + history.length + ' 章)</div>';
+
+    history.forEach((item, index) => {
+        const date = new Date(item.readAt);
+        const timeStr = date.toLocaleString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+
+        html += `
+            <div style="padding: 4px 6px; margin-bottom: 2px; background-color: #3c3c3c; border-radius: 2px; cursor: pointer;"
+                 onclick="loadFromHistory(${index})">
+                <span style="color: #d4d4d4;">${escapeHtml(item.title)}</span>
+                <span style="color: #858585; font-size: 10px; margin-left: 8px;">${timeStr}</span>
+            </div>
+        `;
+    });
+
+    panel.innerHTML = html;
+}
+
+/**
+ * 從歷史記錄載入
+ */
+async function loadFromHistory(index) {
+    const history = getHistory();
+    const item = history[index];
+
+    if (!item) return;
+
+    // 填入 URL
+    document.getElementById('currentUrl').value = item.url;
+
+    // 恢復章節資訊
+    if (item.chapterInfo) {
+        currentChapterInfo = item.chapterInfo;
+    }
+
+    // 抓取章節內容
+    await fetchChapter(item.url);
+
+    // 關閉歷史面板
+    document.getElementById('historyPanel').style.display = 'none';
 }

@@ -55,16 +55,19 @@
     <div class="chapter-nav" id="chapterNav">
         <button onclick="previousChapter()" id="prevBtn">← 上一章</button>
         <div style="display: flex; align-items: center; gap: 10px;">
-            <select id="siteType" onchange="onSiteTypeChange()" style="background-color: #3c3c3c; color: #d4d4d4; border: 1px solid #555; padding: 4px 8px; font-size: 11px;">
-                <option value="auto">🔄 自動檢測</option>
-                <option value="biquge">📚 筆趣閣（簡單導航）</option>
-                <option value="wfxs">📖 五福/微風（分頁+章節）</option>
-                <option value="other">🌐 其他網站</option>
-            </select>
+            <button onclick="toggleBookmarks()" style="font-size: 11px; padding: 4px 8px;" title="書籤">📑</button>
+            <button onclick="toggleHistory()" style="font-size: 11px; padding: 4px 8px;" title="歷史">📜</button>
+            <button onclick="addBookmark()" style="font-size: 11px; padding: 4px 8px;" title="加入書籤">⭐</button>
             <div class="chapter-info" id="chapterInfo">準備就緒</div>
         </div>
         <button onclick="nextChapter()" id="nextBtn">下一章 →</button>
     </div>
+
+    <!-- 書籤面板 -->
+    <div id="bookmarkPanel" style="display: none; background-color: #252526; padding: 10px; border-bottom: 1px solid #1e1e1e; max-height: 200px; overflow-y: auto; font-size: 11px;"></div>
+
+    <!-- 歷史面板 -->
+    <div id="historyPanel" style="display: none; background-color: #252526; padding: 10px; border-bottom: 1px solid #1e1e1e; max-height: 200px; overflow-y: auto; font-size: 11px;"></div>
 
     <!-- 編輯器容器 -->
     <div class="editor-container">
