@@ -11,6 +11,8 @@ services:
     volumes:
       # 挂载源代码目录以支持开发时的热重载
       - ./src:/var/www/html
+      # 保護 node_modules 不被覆蓋（匿名 volume 優先級更高）
+      - /var/www/html/node_modules
       # 持久化 cookie 存储
       - novel-cookies:/tmp/novel_cookies
     environment:

@@ -77,8 +77,13 @@ RUN echo "error_reporting = E_ALL" >> /usr/local/etc/php/conf.d/custom.ini && \
     echo "memory_limit = 256M" >> /usr/local/etc/php/conf.d/custom.ini && \
     echo "max_execution_time = 300" >> /usr/local/etc/php/conf.d/custom.ini
 
-# 創建工作目錄並安裝 Puppeteer
-WORKDIR /var/www/puppeteer
+# 復製應用程序文件到 Apache 默認目錄
+COPY src/ /var/www/html/
+
+# 設置工作目錄
+WORKDIR /var/www/html
+
+# 在 /var/www/html 中安裝 Puppeteer（這樣腳本才能找到）
 RUN npm init -y && \
     npm install puppeteer && \
     # 確保 Puppeteer 可以找到 Chrome
@@ -88,19 +93,11 @@ RUN npm init -y && \
 RUN mkdir -p /tmp/novel_cookies && \
     chmod 777 /tmp/novel_cookies
 
-# 復製應用程序文件到 Apache 默認目錄
-COPY src/ /var/www/html/
-
-# 設置工作目錄回到 web root
-WORKDIR /var/www/html
-
 # 設置正確的文件權限
 RUN chown -R www-data:www-data /var/www/html && \
     chmod -R 755 /var/www/html && \
-    chmod +x /var/www/html/fetch_with_browser.js
-
-# 設置 Puppeteer 權限
-RUN chown -R www-data:www-data /var/www/puppeteer
+    chmod +x /var/www/html/fetch_with_browser.js && \
+    chmod +x /var/www/html/search_with_browser.js
 
 # 暴露 80 端口
 EXPOSE 80
