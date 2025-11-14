@@ -1,6 +1,7 @@
 // 全域變數：儲存 URL 規則
 let urlPattern = null;
 let currentChapterInfo = null;
+let disguiseMode = true; // 偽裝模式開關（預設開啟）
 
 // ==================== 平台管理系統 ====================
 
@@ -670,6 +671,12 @@ function convertToCode() {
 
     console.log('開始轉換...');
 
+    // 根據偽裝模式選擇渲染方式
+    if (!disguiseMode) {
+        renderPlainText(input);
+        return;
+    }
+
     // 分割段落
     const paragraphs = input.split(/\n+/).filter(p => p.trim());
     const codeLines = [];
@@ -761,6 +768,12 @@ function renderCode(codeLines) {
     const codeArea = document.getElementById('codeArea');
     const lineNumbers = document.getElementById('lineNumbers');
 
+    // 恢復行號顯示（可能在閱讀模式時被隱藏）
+    lineNumbers.style.display = 'block';
+
+    // 清除閱讀模式的內聯樣式
+    codeArea.style = '';
+
     // 生成程式碼內容
     codeArea.innerHTML = codeLines
         .map(line => `<div class="code-line">${line || '&nbsp;'}</div>`)
@@ -784,6 +797,76 @@ function escapeHtml(text) {
     return text.replace(/[&<>"']/g, m => map[m]);
 }
 
+// 切換偽裝模式
+function toggleDisguiseMode() {
+    disguiseMode = !disguiseMode;
+
+    // 更新按鈕文字
+    const btn = document.getElementById('disguiseBtn');
+    btn.textContent = disguiseMode ? '🎭 偽裝' : '📖 閱讀';
+    btn.title = disguiseMode ? '切換到閱讀模式' : '切換到偽裝模式';
+
+    // 儲存設定
+    localStorage.setItem('disguiseMode', disguiseMode);
+
+    // 重新渲染當前內容
+    const input = document.getElementById('novelInput').value;
+    if (input.trim()) {
+        convertToCode();
+    }
+
+    console.log('偽裝模式:', disguiseMode ? '開啟' : '關閉');
+}
+
+// 非偽裝模式：渲染純文字閱讀格式
+function renderPlainText(input) {
+    console.log('使用閱讀模式渲染...');
+    const codeArea = document.getElementById('codeArea');
+    const lineNumbers = document.getElementById('lineNumbers');
+
+    // 分割段落
+    const paragraphs = input.split(/\n+/).filter(p => p.trim());
+
+    // 生成閱讀友好的 HTML
+    const readableHtml = paragraphs.map(para => {
+        return `<div class="reading-paragraph">${escapeHtml(para)}</div>`;
+    }).join('');
+
+    // 設定閱讀模式樣式
+    codeArea.innerHTML = `
+        <style>
+            .reading-paragraph {
+                line-height: 2;
+                margin-bottom: 1.5em;
+                font-size: 16px;
+                color: #d4d4d4;
+                text-indent: 2em;
+                letter-spacing: 0.05em;
+            }
+            #codeArea {
+                padding: 30px 50px;
+                max-width: 800px;
+                margin: 0 auto;
+            }
+        </style>
+        ${readableHtml}
+    `;
+
+    // 隱藏行號（閱讀模式不需要）
+    lineNumbers.style.display = 'none';
+
+    // 儲存內容
+    localStorage.setItem('novelContent', input);
+    console.log('閱讀模式渲染完成！');
+
+    // 自動隱藏輸入框
+    setTimeout(() => {
+        if (!document.getElementById('controlPanel').classList.contains('hidden')) {
+            toggleInput();
+        }
+    }, 500);
+}
+
 // 切換輸入面板顯示
 function toggleInput() {
     const panel = document.getElementById('controlPanel');
@@ -800,6 +883,17 @@ function toggleInput() {
 
 // 頁面載入時恢復上次的內容
 window.addEventListener('DOMContentLoaded', () => {
+    // 恢復偽裝模式設定
+    const savedDisguiseMode = localStorage.getItem('disguiseMode');
+    if (savedDisguiseMode !== null) {
+        disguiseMode = savedDisguiseMode === 'true';
+    }
+
+    // 更新按鈕顯示
+    const btn = document.getElementById('disguiseBtn');
+    btn.textContent = disguiseMode ? '🎭 偽裝' : '📖 閱讀';
+    btn.title = disguiseMode ? '切換到閱讀模式' : '切換到偽裝模式';
+
     // 恢復上次的章節資訊
     const savedUrl = localStorage.getItem('currentChapterUrl');
     const savedInfo = localStorage.getItem('currentChapterInfo');
