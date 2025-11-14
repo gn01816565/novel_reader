@@ -539,8 +539,14 @@ async function previousChapter() {
     }
 
     console.log('上一章 URL:', prevUrl);
-    currentChapterInfo.chapterId--;
-    await fetchChapter(prevUrl);
+
+    // 先嘗試抓取，成功後才更新章節 ID
+    const success = await fetchChapter(prevUrl);
+    if (success) {
+        currentChapterInfo.chapterId--;
+        // 更新存儲
+        localStorage.setItem('currentChapterInfo', JSON.stringify(currentChapterInfo));
+    }
 }
 
 // 下一章（智能分頁）
@@ -550,6 +556,10 @@ async function nextChapter() {
         return;
     }
 
+    // 備份當前狀態
+    const originalChapterId = currentChapterInfo.chapterId;
+    const originalVolumeId = currentChapterInfo.volumeId;
+
     // 先嘗試當前章節的下一頁
     const nextPageUrl = generateUrl(currentChapterInfo, 1);
     if (!nextPageUrl) {
@@ -558,30 +568,39 @@ async function nextChapter() {
     }
 
     console.log('嘗試下一頁 URL:', nextPageUrl);
-    currentChapterInfo.chapterId++;
 
     const success = await fetchChapter(nextPageUrl, true);
 
-    if (!success && currentChapterInfo.volumeId) {
+    if (success) {
+        // 抓取成功，更新章節 ID
+        currentChapterInfo.chapterId = originalChapterId + 1;
+        localStorage.setItem('currentChapterInfo', JSON.stringify(currentChapterInfo));
+    } else if (currentChapterInfo.volumeId) {
         // 如果是五福小說網且當前頁沒有內容，嘗試下一個章節
         console.log('當前分頁已結束，嘗試下一章節...');
-        currentChapterInfo.volumeId++;
-        currentChapterInfo.chapterId = 1;
 
-        const nextVolumeUrl = generateUrl(currentChapterInfo, 0);
+        // 建立下一個 volume 的暫時資訊來生成 URL
+        const tempInfo = { ...currentChapterInfo, volumeId: originalVolumeId + 1, chapterId: 1 };
+        const nextVolumeUrl = generateUrl(tempInfo, 0);
+
         if (nextVolumeUrl) {
             console.log('跳轉到下一章節:', nextVolumeUrl);
             updateChapterInfo('自動跳轉到下一章節...');
-            await fetchChapter(nextVolumeUrl);
+            const volumeSuccess = await fetchChapter(nextVolumeUrl);
+
+            if (volumeSuccess) {
+                // 成功抓取下一個 volume 的第一章
+                currentChapterInfo.volumeId = originalVolumeId + 1;
+                currentChapterInfo.chapterId = 1;
+                localStorage.setItem('currentChapterInfo', JSON.stringify(currentChapterInfo));
+            } else {
+                updateChapterInfo('無法抓取下一章節');
+            }
         } else {
             updateChapterInfo('無法生成下一章節 URL');
-            // 恢復原始狀態
-            currentChapterInfo.volumeId--;
-            currentChapterInfo.chapterId--;
         }
-    } else if (!success) {
+    } else {
         // 非五福小說網或其他錯誤
-        currentChapterInfo.chapterId--;
         updateChapterInfo('已到最後一章或抓取失敗');
     }
 }
