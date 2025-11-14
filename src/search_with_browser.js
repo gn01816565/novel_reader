@@ -31,6 +31,8 @@ const cookieFile = '/tmp/novel_cookies/biquge_cookies.json';
             '--disable-accelerated-2d-canvas',
             '--disable-gpu',
             '--window-size=1920,1080',
+            '--disable-blink-features=AutomationControlled',
+            '--disable-features=IsolateOrigins,site-per-process'
         ],
         executablePath: '/usr/bin/google-chrome-stable'
     });
@@ -39,7 +41,23 @@ const cookieFile = '/tmp/novel_cookies/biquge_cookies.json';
         const page = await browser.newPage();
 
         // 設定 User-Agent
-        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
+        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+
+        // 設定額外的 headers
+        await page.setExtraHTTPHeaders({
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1'
+        });
+
+        // 隱藏 webdriver 屬性
+        await page.evaluateOnNewDocument(() => {
+            Object.defineProperty(navigator, 'webdriver', {
+                get: () => false,
+            });
+        });
 
         // 載入 Cookie
         if (fs.existsSync(cookieFile)) {
@@ -49,17 +67,35 @@ const cookieFile = '/tmp/novel_cookies/biquge_cookies.json';
 
         // 訪問頁面
         await page.goto(url, {
-            waitUntil: 'networkidle2',
-            timeout: 30000
+            waitUntil: 'domcontentloaded',
+            timeout: 60000
         });
 
-        // 等待內容載入
-        await page.waitForTimeout(2000);
+        // 等待 Cloudflare 驗證完成（需要較長時間）
+        await new Promise(resolve => setTimeout(resolve, 8000));
+
+        // 等待頁面完全加載
+        try {
+            await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 10000 }).catch(() => {});
+        } catch (e) {
+            // 忽略超時錯誤
+        }
+
+        // Debug: 輸出頁面標題和部分 HTML
+        const title = await page.title();
+        const bodyText = await page.evaluate(() => document.body.innerText.substring(0, 500));
 
         let result;
+        let debugInfo = null;
         switch (action) {
             case 'search':
                 result = await extractSearchResults(page);
+                // Debug info
+                debugInfo = {
+                    title: title,
+                    bodyPreview: bodyText,
+                    url: page.url()
+                };
                 break;
             case 'bookInfo':
                 result = await extractBookInfo(page);
@@ -76,12 +112,16 @@ const cookieFile = '/tmp/novel_cookies/biquge_cookies.json';
         fs.mkdirSync('/tmp/novel_cookies', { recursive: true });
         fs.writeFileSync(cookieFile, JSON.stringify(cookies, null, 2));
 
-        console.log(JSON.stringify({
+        const output = {
             success: true,
             data: result,
             method: 'puppeteer',
             action: action
-        }));
+        };
+        if (debugInfo) {
+            output.debug = debugInfo;
+        }
+        console.log(JSON.stringify(output));
 
     } catch (error) {
         console.log(JSON.stringify({

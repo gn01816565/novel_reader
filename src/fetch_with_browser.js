@@ -49,7 +49,7 @@ if (!targetUrl) {
         });
 
         // 等待頁面完全載入
-        await page.waitForTimeout(2000);
+        await new Promise(resolve => setTimeout(resolve, 2000));
 
         // 提取內容 - 針對不同網站使用不同選擇器
         let content = '';
