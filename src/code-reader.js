@@ -1901,7 +1901,7 @@ async function startBatchDownload() {
  */
 async function fetchChapterContent(chapterUrl) {
     try {
-        const response = await fetch('/fetch_novel.php', {
+        const response = await fetch('fetch_novel.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
