@@ -71,19 +71,25 @@ const cookieFile = '/tmp/novel_cookies/biquge_cookies.json';
             timeout: 60000
         });
 
-        // 等待 Cloudflare 驗證完成（需要較長時間）
-        await new Promise(resolve => setTimeout(resolve, 8000));
+        // ✅ 增加等待時間：等待 Cloudflare 驗證完成（從 8 秒增加到 12 秒）
+        console.error(`[DEBUG] 等待 Cloudflare 驗證... (12 秒)`);
+        await new Promise(resolve => setTimeout(resolve, 12000));
 
         // 等待頁面完全加載
         try {
             await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 10000 }).catch(() => {});
         } catch (e) {
             // 忽略超時錯誤
+            console.error('[DEBUG] waitForNavigation 超時（可忽略）');
         }
 
-        // Debug: 輸出頁面標題和部分 HTML
+        // ✅ Debug: 輸出頁面標題和部分 HTML
         const title = await page.title();
         const bodyText = await page.evaluate(() => document.body.innerText.substring(0, 500));
+
+        console.error('[DEBUG] 頁面標題:', title);
+        console.error('[DEBUG] 當前 URL:', page.url());
+        console.error('[DEBUG] 頁面內容預覽:', bodyText.substring(0, 200));
 
         let result;
         let debugInfo = null;
@@ -138,6 +144,9 @@ const cookieFile = '/tmp/novel_cookies/biquge_cookies.json';
  * 提取搜尋結果
  */
 async function extractSearchResults(page) {
+    // ✅ 添加 debug 資訊
+    console.error('[DEBUG] 開始提取搜尋結果...');
+
     return await page.evaluate(() => {
         const results = [];
 
@@ -152,9 +161,20 @@ async function extractSearchResults(page) {
         ];
 
         let items = [];
+        let matchedSelector = null;
         for (const selector of selectors) {
             items = document.querySelectorAll(selector);
-            if (items.length > 0) break;
+            if (items.length > 0) {
+                matchedSelector = selector;
+                break;
+            }
+        }
+
+        // ✅ Debug 輸出
+        if (matchedSelector) {
+            console.error('[DEBUG] 找到搜尋結果，選擇器:', matchedSelector, '數量:', items.length);
+        } else {
+            console.error('[DEBUG] 無法使用預設選擇器找到結果，嘗試尋找 book 連結...');
         }
 
         // 如果沒有找到，嘗試找所有包含 book 連結的項目

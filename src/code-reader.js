@@ -488,6 +488,13 @@ async function fetchChapter(url, isAutoNext = false) {
             novelInput.value = result.content;
             novelInput.disabled = false;
 
+            // ✅ 重新分析 URL，確保狀態同步
+            const newInfo = analyzeUrl(url);
+            if (newInfo) {
+                currentChapterInfo = newInfo;
+                console.log('已更新章節資訊:', currentChapterInfo);
+            }
+
             // 自動轉換
             convertToCode();
 
@@ -541,13 +548,8 @@ async function previousChapter() {
 
     console.log('上一章 URL:', prevUrl);
 
-    // 先嘗試抓取，成功後才更新章節 ID
-    const success = await fetchChapter(prevUrl);
-    if (success) {
-        currentChapterInfo.chapterId--;
-        // 更新存儲
-        localStorage.setItem('currentChapterInfo', JSON.stringify(currentChapterInfo));
-    }
+    // ✅ fetchChapter 會自動重新分析 URL 並更新 currentChapterInfo
+    await fetchChapter(prevUrl);
 }
 
 // 下一章（智能分頁）
@@ -557,8 +559,7 @@ async function nextChapter() {
         return;
     }
 
-    // 備份當前狀態
-    const originalChapterId = currentChapterInfo.chapterId;
+    // 備份當前狀態（用於五福小說網的跨卷切換）
     const originalVolumeId = currentChapterInfo.volumeId;
 
     // 先嘗試當前章節的下一頁
@@ -572,16 +573,17 @@ async function nextChapter() {
 
     const success = await fetchChapter(nextPageUrl, true);
 
-    if (success) {
-        // 抓取成功，更新章節 ID
-        currentChapterInfo.chapterId = originalChapterId + 1;
-        localStorage.setItem('currentChapterInfo', JSON.stringify(currentChapterInfo));
-    } else if (currentChapterInfo.volumeId) {
-        // 如果是五福小說網且當前頁沒有內容，嘗試下一個章節
+    if (!success && originalVolumeId) {
+        // 如果是五福小說網且當前頁沒有內容，嘗試下一個章節（卷）
         console.log('當前分頁已結束，嘗試下一章節...');
 
-        // 建立下一個 volume 的暫時資訊來生成 URL
-        const tempInfo = { ...currentChapterInfo, volumeId: originalVolumeId + 1, chapterId: 1 };
+        // 使用原始的 volumeId 來生成下一卷 URL
+        // 注意：這裡需要基於原始狀態，因為 fetchChapter 失敗時不會更新 currentChapterInfo
+        const tempInfo = {
+            ...currentChapterInfo,
+            volumeId: parseInt(originalVolumeId) + 1,
+            chapterId: 1
+        };
         const nextVolumeUrl = generateUrl(tempInfo, 0);
 
         if (nextVolumeUrl) {
@@ -589,21 +591,18 @@ async function nextChapter() {
             updateChapterInfo('自動跳轉到下一章節...');
             const volumeSuccess = await fetchChapter(nextVolumeUrl);
 
-            if (volumeSuccess) {
-                // 成功抓取下一個 volume 的第一章
-                currentChapterInfo.volumeId = originalVolumeId + 1;
-                currentChapterInfo.chapterId = 1;
-                localStorage.setItem('currentChapterInfo', JSON.stringify(currentChapterInfo));
-            } else {
+            if (!volumeSuccess) {
                 updateChapterInfo('無法抓取下一章節');
             }
+            // ✅ fetchChapter 成功時會自動更新 currentChapterInfo
         } else {
             updateChapterInfo('無法生成下一章節 URL');
         }
-    } else {
+    } else if (!success) {
         // 非五福小說網或其他錯誤
         updateChapterInfo('已到最後一章或抓取失敗');
     }
+    // ✅ 如果 success 為 true，fetchChapter 已經自動更新了 currentChapterInfo
 }
 
 // 更新章節資訊顯示
