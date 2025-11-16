@@ -58,12 +58,51 @@
             <button onclick="toggleAutoRead()" style="font-size: 11px; padding: 4px 8px;" title="自動續讀" id="autoReadBtn">▶ 自動</button>
             <button onclick="toggleDisguiseMode()" style="font-size: 11px; padding: 4px 8px;" title="切換偽裝模式" id="disguiseBtn">🎭 偽裝</button>
             <button onclick="cycleTheme()" style="font-size: 11px; padding: 4px 8px;" title="切換主題" id="themeBtn">🎨 主題</button>
+            <button onclick="toggleChapterList()" style="font-size: 11px; padding: 4px 8px;" title="章節目錄">📚 目錄</button>
+            <button onclick="toggleBatchDownload()" style="font-size: 11px; padding: 4px 8px;" title="批次下載">📥 下載</button>
             <button onclick="toggleBookmarks()" style="font-size: 11px; padding: 4px 8px;" title="書籤">📑</button>
             <button onclick="toggleHistory()" style="font-size: 11px; padding: 4px 8px;" title="歷史">📜</button>
             <button onclick="addBookmark()" style="font-size: 11px; padding: 4px 8px;" title="加入書籤">⭐</button>
             <div class="chapter-info" id="chapterInfo">準備就緒</div>
         </div>
         <button onclick="nextChapter()" id="nextBtn">下一章 →</button>
+    </div>
+
+    <!-- 章節目錄面板 -->
+    <div id="chapterTocPanel" style="display: none; background-color: #252526; padding: 10px; border-bottom: 1px solid #1e1e1e; max-height: 400px; overflow-y: auto; font-size: 11px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <div style="font-weight: bold; color: #d4d4d4;">章節目錄</div>
+            <button onclick="toggleChapterList()" style="background: transparent; border: none; color: #858585; cursor: pointer; font-size: 14px;">✕</button>
+        </div>
+        <input type="text" id="chapterSearchInput" placeholder="搜尋章節..."
+               style="width: 100%; background-color: #3c3c3c; color: #d4d4d4; border: 1px solid #3c3c3c; padding: 6px; margin-bottom: 10px; font-family: inherit; font-size: 11px;"
+               oninput="filterChapterList()">
+        <div id="chapterTocContent"></div>
+    </div>
+
+    <!-- 批次下載面板 -->
+    <div id="batchDownloadPanel" style="display: none; background-color: #252526; padding: 10px; border-bottom: 1px solid #1e1e1e; font-size: 11px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <div style="font-weight: bold; color: #d4d4d4;">📥 批次下載章節</div>
+            <button onclick="toggleBatchDownload()" style="background: transparent; border: none; color: #858585; cursor: pointer; font-size: 14px;">✕</button>
+        </div>
+        <div style="margin-bottom: 10px;">
+            <label style="color: #858585; display: block; margin-bottom: 4px;">從第幾章開始：</label>
+            <input type="number" id="downloadStartChapter" value="1" min="1"
+                   style="width: 100%; background-color: #3c3c3c; color: #d4d4d4; border: 1px solid #3c3c3c; padding: 6px; font-family: inherit; font-size: 11px;">
+        </div>
+        <div style="margin-bottom: 10px;">
+            <label style="color: #858585; display: block; margin-bottom: 4px;">到第幾章結束：</label>
+            <input type="number" id="downloadEndChapter" value="10" min="1"
+                   style="width: 100%; background-color: #3c3c3c; color: #d4d4d4; border: 1px solid #3c3c3c; padding: 6px; font-family: inherit; font-size: 11px;">
+        </div>
+        <div style="margin-bottom: 10px;">
+            <label style="color: #858585; display: block; margin-bottom: 4px;">檔案名稱：</label>
+            <input type="text" id="downloadFilename" value="novel.txt"
+                   style="width: 100%; background-color: #3c3c3c; color: #d4d4d4; border: 1px solid #3c3c3c; padding: 6px; font-family: inherit; font-size: 11px;">
+        </div>
+        <button onclick="startBatchDownload()" style="width: 100%; padding: 8px; background-color: #007acc; color: white; border: none; cursor: pointer; border-radius: 2px;">開始下載</button>
+        <div id="downloadProgress" style="margin-top: 10px; color: #858585; display: none;"></div>
     </div>
 
     <!-- 書籤面板 -->

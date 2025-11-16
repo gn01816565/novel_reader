@@ -1281,7 +1281,7 @@ async function showChapterList(bookUrl, bookTitle) {
         container.innerHTML = html;
 
         // 儲存完整章節列表到全域變數（用於之後的導航）
-        window.fullChapterList = chapters;
+        fullChapterList = chapters;
 
     } catch (error) {
         console.error('獲取章節目錄錯誤:', error);
@@ -1564,4 +1564,386 @@ async function loadFromHistory(index) {
 
     // 關閉歷史面板
     document.getElementById('historyPanel').style.display = 'none';
+}
+
+// ==================== 章節目錄功能 ====================
+
+// 全域變數：儲存完整章節列表
+let fullChapterList = [];
+let filteredChapterList = [];
+
+/**
+ * 切換章節目錄面板
+ */
+async function toggleChapterList() {
+    const panel = document.getElementById('chapterTocPanel');
+    const isVisible = panel.style.display === 'block';
+
+    if (isVisible) {
+        // 關閉面板
+        panel.style.display = 'none';
+        return;
+    }
+
+    // 開啟面板
+    panel.style.display = 'block';
+
+    // 如果還沒有載入章節列表，嘗試載入
+    if (fullChapterList.length === 0) {
+        await loadChapterListData();
+    } else {
+        // 已有資料，直接顯示
+        renderChapterList(fullChapterList);
+    }
+}
+
+/**
+ * 載入章節列表資料
+ */
+async function loadChapterListData() {
+    const contentDiv = document.getElementById('chapterTocContent');
+
+    // 嘗試從當前 URL 推斷書籍 URL
+    const currentUrl = document.getElementById('currentUrl').value.trim();
+    if (!currentUrl) {
+        contentDiv.innerHTML = '<div style="color: #858585; padding: 8px;">請先載入一個章節</div>';
+        return;
+    }
+
+    // 顯示載入中
+    contentDiv.innerHTML = '<div style="color: #858585; padding: 8px;">⏳ 正在載入章節目錄...</div>';
+
+    try {
+        // 根據不同網站推斷書籍 URL
+        let bookUrl = '';
+
+        // 筆趣閣：https://m.biquge.tw/book/1281700/78890835.html → https://m.biquge.tw/book/1281700/
+        if (currentUrl.includes('biquge')) {
+            const match = currentUrl.match(/^(https?:\/\/[^/]+\/book\/\d+)\//);
+            if (match) {
+                bookUrl = match[1] + '/';
+            }
+        }
+        // 五福小說網：https://m.wfxs.tw/xs-123/du-456/1.html → https://m.wfxs.tw/xs-123/
+        else if (currentUrl.includes('wfxs')) {
+            const match = currentUrl.match(/^(https?:\/\/[^/]+\/xs-\d+)\//);
+            if (match) {
+                bookUrl = match[1] + '/';
+            }
+        }
+        // 通用模式：移除最後的章節部分
+        else {
+            const match = currentUrl.match(/^(https?:\/\/[^/]+\/[^/]+\/\d+)\//);
+            if (match) {
+                bookUrl = match[1] + '/';
+            }
+        }
+
+        if (!bookUrl) {
+            contentDiv.innerHTML = '<div style="color: #f48771; padding: 8px;">⚠️ 無法識別書籍 URL 格式</div>';
+            return;
+        }
+
+        console.log('[章節目錄] 書籍 URL:', bookUrl);
+
+        // 呼叫 API 獲取章節列表
+        const chapters = await platformManager.getChapterList(bookUrl);
+
+        if (chapters.length === 0) {
+            contentDiv.innerHTML = '<div style="color: #858585; padding: 8px;">沒有找到章節</div>';
+            return;
+        }
+
+        // 儲存到全域變數
+        fullChapterList = chapters;
+        filteredChapterList = chapters;
+
+        console.log('[章節目錄] 載入成功，共', chapters.length, '章');
+
+        // 渲染列表
+        renderChapterList(chapters);
+
+    } catch (error) {
+        console.error('[章節目錄] 載入錯誤:', error);
+        contentDiv.innerHTML = `<div style="color: #f48771; padding: 8px;">❌ 載入失敗: ${escapeHtml(error.message)}</div>`;
+    }
+}
+
+/**
+ * 渲染章節列表
+ */
+function renderChapterList(chapters) {
+    const contentDiv = document.getElementById('chapterTocContent');
+    const currentUrl = document.getElementById('currentUrl').value.trim();
+
+    if (chapters.length === 0) {
+        contentDiv.innerHTML = '<div style="color: #858585; padding: 8px;">沒有符合的章節</div>';
+        return;
+    }
+
+    // 顯示章節數量
+    let html = `<div style="color: #858585; margin-bottom: 8px; font-size: 10px;">共 ${chapters.length} 章</div>`;
+
+    // 渲染章節列表（只顯示前 200 章，避免太多）
+    const displayChapters = chapters.slice(0, 200);
+
+    displayChapters.forEach((chapter, index) => {
+        const isCurrentChapter = chapter.chapterUrl === currentUrl;
+        const backgroundColor = isCurrentChapter ? '#094771' : '#3c3c3c';
+        const textColor = isCurrentChapter ? '#4db8ff' : '#d4d4d4';
+        const indicator = isCurrentChapter ? '▶ ' : '';
+
+        html += `
+            <div style="padding: 4px 6px; margin-bottom: 2px; background-color: ${backgroundColor}; border-radius: 2px; cursor: pointer;"
+                 onclick="jumpToChapter('${escapeHtml(chapter.chapterUrl)}')">
+                <span style="color: ${textColor}; font-size: 11px;">${indicator}${escapeHtml(chapter.chapterTitle)}</span>
+            </div>
+        `;
+    });
+
+    if (chapters.length > 200) {
+        html += `<div style="color: #858585; padding: 8px; font-size: 10px; text-align: center;">
+            僅顯示前 200 章，請使用搜尋功能尋找其他章節
+        </div>`;
+    }
+
+    contentDiv.innerHTML = html;
+
+    // 自動捲動到當前章節
+    setTimeout(() => {
+        const currentChapterEl = contentDiv.querySelector('[style*="#094771"]');
+        if (currentChapterEl) {
+            currentChapterEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }, 100);
+}
+
+/**
+ * 過濾章節列表（搜尋功能）
+ */
+function filterChapterList() {
+    const searchInput = document.getElementById('chapterSearchInput');
+    const keyword = searchInput.value.trim().toLowerCase();
+
+    if (keyword === '') {
+        // 沒有搜尋關鍵字，顯示全部
+        filteredChapterList = fullChapterList;
+    } else {
+        // 過濾章節
+        filteredChapterList = fullChapterList.filter(chapter => {
+            return chapter.chapterTitle.toLowerCase().includes(keyword);
+        });
+    }
+
+    // 重新渲染
+    renderChapterList(filteredChapterList);
+}
+
+/**
+ * 跳轉到指定章節
+ */
+async function jumpToChapter(chapterUrl) {
+    console.log('[章節目錄] 跳轉到:', chapterUrl);
+
+    // 填入 URL
+    document.getElementById('currentUrl').value = chapterUrl;
+
+    // 分析 URL
+    const info = analyzeUrl(chapterUrl);
+    if (info) {
+        currentChapterInfo = info;
+        updateChapterInfo(`已識別：${info.patternName} | 章節 ${info.chapterId}`);
+    }
+
+    // 抓取章節內容
+    await fetchChapter(chapterUrl);
+
+    // 加入閱讀歷史
+    addToHistory(chapterUrl);
+
+    // 關閉章節目錄面板
+    document.getElementById('chapterTocPanel').style.display = 'none';
+
+    // 清空搜尋框
+    document.getElementById('chapterSearchInput').value = '';
+}
+
+// ==================== 批次下載功能 ====================
+
+/**
+ * 切換批次下載面板
+ */
+function toggleBatchDownload() {
+    const panel = document.getElementById('batchDownloadPanel');
+    const isVisible = panel.style.display === 'block';
+
+    if (isVisible) {
+        panel.style.display = 'none';
+    } else {
+        panel.style.display = 'block';
+
+        // 如果有章節列表，自動填入章節範圍
+        if (fullChapterList.length > 0) {
+            document.getElementById('downloadStartChapter').value = 1;
+            document.getElementById('downloadEndChapter').value = Math.min(10, fullChapterList.length);
+        }
+    }
+}
+
+/**
+ * 開始批次下載
+ */
+async function startBatchDownload() {
+    const startChapter = parseInt(document.getElementById('downloadStartChapter').value);
+    const endChapter = parseInt(document.getElementById('downloadEndChapter').value);
+    const filename = document.getElementById('downloadFilename').value.trim() || 'novel.txt';
+
+    // 驗證輸入
+    if (isNaN(startChapter) || isNaN(endChapter)) {
+        alert('請輸入有效的章節編號');
+        return;
+    }
+
+    if (startChapter > endChapter) {
+        alert('起始章節不能大於結束章節');
+        return;
+    }
+
+    if (endChapter - startChapter > 100) {
+        if (!confirm('您要下載超過 100 章，這可能需要較長時間。確定要繼續嗎？')) {
+            return;
+        }
+    }
+
+    // 確保有章節列表
+    if (fullChapterList.length === 0) {
+        alert('請先開啟章節目錄，載入章節列表');
+        return;
+    }
+
+    // 顯示進度
+    const progressDiv = document.getElementById('downloadProgress');
+    progressDiv.style.display = 'block';
+    progressDiv.innerHTML = '⏳ 準備下載...';
+
+    try {
+        // 取得要下載的章節列表
+        const chaptersToDownload = fullChapterList.slice(startChapter - 1, endChapter);
+
+        if (chaptersToDownload.length === 0) {
+            progressDiv.innerHTML = '❌ 沒有找到指定範圍的章節';
+            return;
+        }
+
+        let allContent = '';
+        let successCount = 0;
+        let failCount = 0;
+
+        // 逐章抓取
+        for (let i = 0; i < chaptersToDownload.length; i++) {
+            const chapter = chaptersToDownload[i];
+            const currentChapterNum = startChapter + i;
+
+            progressDiv.innerHTML = `⏳ 正在下載第 ${currentChapterNum}/${endChapter} 章: ${escapeHtml(chapter.chapterTitle)}`;
+
+            try {
+                // 抓取章節內容
+                const content = await fetchChapterContent(chapter.chapterUrl);
+
+                if (content && content.trim().length > 100) {
+                    // 加入章節標題和內容
+                    allContent += `\n\n========== ${chapter.chapterTitle} ==========\n\n`;
+                    allContent += content.trim();
+                    allContent += '\n\n';
+                    successCount++;
+                } else {
+                    console.warn(`[批次下載] 章節內容太短或為空: ${chapter.chapterTitle}`);
+                    allContent += `\n\n========== ${chapter.chapterTitle} ==========\n\n`;
+                    allContent += '[章節內容抓取失敗或內容為空]\n\n';
+                    failCount++;
+                }
+
+                // 避免請求太快，每章之間延遲 1 秒
+                if (i < chaptersToDownload.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+
+            } catch (error) {
+                console.error(`[批次下載] 抓取失敗: ${chapter.chapterTitle}`, error);
+                allContent += `\n\n========== ${chapter.chapterTitle} ==========\n\n`;
+                allContent += `[抓取失敗: ${error.message}]\n\n`;
+                failCount++;
+            }
+        }
+
+        // 加入檔案頭部資訊
+        const header = `小說章節合集\n下載時間: ${new Date().toLocaleString('zh-TW')}\n章節範圍: 第 ${startChapter} 章 - 第 ${endChapter} 章\n成功: ${successCount} 章 | 失敗: ${failCount} 章\n\n${'='.repeat(60)}\n`;
+        allContent = header + allContent;
+
+        // 下載文字檔
+        downloadTextFile(allContent, filename);
+
+        progressDiv.innerHTML = `✅ 下載完成！成功: ${successCount} 章，失敗: ${failCount} 章`;
+
+        // 3 秒後隱藏進度提示
+        setTimeout(() => {
+            progressDiv.style.display = 'none';
+        }, 3000);
+
+    } catch (error) {
+        console.error('[批次下載] 錯誤:', error);
+        progressDiv.innerHTML = `❌ 下載失敗: ${escapeHtml(error.message)}`;
+    }
+}
+
+/**
+ * 抓取單一章節內容（返回純文字）
+ */
+async function fetchChapterContent(chapterUrl) {
+    try {
+        const response = await fetch('/fetch_novel.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `url=${encodeURIComponent(chapterUrl)}`
+        });
+
+        const result = await response.json();
+
+        if (result.success && result.content) {
+            // 返回純文字內容
+            return result.content;
+        } else {
+            throw new Error(result.error || '抓取失敗');
+        }
+
+    } catch (error) {
+        console.error('[抓取章節內容] 錯誤:', error);
+        throw error;
+    }
+}
+
+/**
+ * 下載文字檔案
+ */
+function downloadTextFile(content, filename) {
+    // 建立 Blob
+    const blob = new Blob([content], { type: 'text/plain; charset=utf-8' });
+
+    // 建立下載連結
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+
+    // 觸發下載
+    document.body.appendChild(link);
+    link.click();
+
+    // 清理
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    console.log('[批次下載] 檔案已下載:', filename);
 }
