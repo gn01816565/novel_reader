@@ -5,49 +5,105 @@
     box-sizing: border-box;
 }
 
+/* ==================== 主題顏色定義 ==================== */
+:root {
+    /* VS Code 主題（預設）*/
+    --bg-primary: #1e1e1e;
+    --bg-secondary: #252526;
+    --bg-tertiary: #2d2d2d;
+    --bg-input: #3c3c3c;
+    --text-primary: #d4d4d4;
+    --text-secondary: #858585;
+    --text-accent: #519aba;
+    --border-color: #1e1e1e;
+    --scrollbar-thumb: #424442;
+}
+
+/* 純黑夜間主題 */
+body[data-theme="night"] {
+    --bg-primary: #000000;
+    --bg-secondary: #0a0a0a;
+    --bg-tertiary: #151515;
+    --bg-input: #1a1a1a;
+    --text-primary: #b0b0b0;
+    --text-secondary: #707070;
+    --text-accent: #4a90a4;
+    --border-color: #0a0a0a;
+    --scrollbar-thumb: #2a2a2a;
+}
+
+/* 護眼棕色主題 */
+body[data-theme="sepia"] {
+    --bg-primary: #f4ecd8;
+    --bg-secondary: #ede4d0;
+    --bg-tertiary: #e6dcc8;
+    --bg-input: #ded4c0;
+    --text-primary: #5b4636;
+    --text-secondary: #8b7355;
+    --text-accent: #a67c52;
+    --border-color: #d6ccb8;
+    --scrollbar-thumb: #c6bca8;
+}
+
+/* 護眼綠色主題 */
+body[data-theme="green"] {
+    --bg-primary: #cce8cc;
+    --bg-secondary: #c2dec2;
+    --bg-tertiary: #b8d4b8;
+    --bg-input: #aecaae;
+    --text-primary: #003300;
+    --text-secondary: #006600;
+    --text-accent: #007700;
+    --border-color: #b8d4b8;
+    --scrollbar-thumb: #a8c4a8;
+}
+
 body {
     font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-    background-color: #1e1e1e;
-    color: #d4d4d4;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
     overflow: hidden;
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* VS Code 頂部標籤欄 */
 .tab-bar {
-    background-color: #2d2d2d;
+    background-color: var(--bg-tertiary);
     height: 35px;
     display: flex;
     align-items: center;
-    border-bottom: 1px solid #1e1e1e;
+    border-bottom: 1px solid var(--border-color);
     cursor: pointer;
+    transition: background-color 0.3s ease;
 }
 
 .tab-bar:hover {
-    background-color: #2a2a2a;
+    background-color: var(--bg-secondary);
 }
 
 .tab {
-    background-color: #1e1e1e;
+    background-color: var(--bg-primary);
     padding: 8px 16px;
     display: flex;
     align-items: center;
     gap: 8px;
-    border-right: 1px solid #2d2d2d;
+    border-right: 1px solid var(--bg-tertiary);
     font-size: 13px;
 }
 
 .tab-icon {
-    color: #519aba;
+    color: var(--text-accent);
 }
 
 /* 控制面板 */
 .control-panel {
-    background-color: #252526;
+    background-color: var(--bg-secondary);
     padding: 10px;
-    border-bottom: 1px solid #1e1e1e;
+    border-bottom: 1px solid var(--border-color);
     display: flex;
     gap: 10px;
     align-items: center;
+    transition: background-color 0.3s ease;
 }
 
 .control-panel button {
@@ -229,4 +285,61 @@ body {
 
 .code-area::-webkit-scrollbar-thumb:hover {
     background: #4e4e4e;
+}
+
+/* ==================== 閱讀進度條 ==================== */
+.reading-progress {
+    position: fixed;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 40px;
+    height: 200px;
+    background-color: rgba(30, 30, 30, 0.8);
+    border-radius: 20px 0 0 20px;
+    padding: 10px 5px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    z-index: 100;
+    transition: all 0.3s ease;
+}
+
+.reading-progress:hover {
+    width: 50px;
+    background-color: rgba(30, 30, 30, 0.95);
+}
+
+.progress-bar {
+    position: relative;
+    width: 8px;
+    flex: 1;
+    background-color: #3c3c3c;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 0%;
+    background: linear-gradient(to top, #007acc, #4db8ff);
+    border-radius: 4px;
+    transition: height 0.2s ease;
+}
+
+.progress-text {
+    font-size: 11px;
+    color: #858585;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    user-select: none;
+    font-family: 'Consolas', monospace;
+}
+
+.reading-progress:hover .progress-text {
+    color: #d4d4d4;
 }

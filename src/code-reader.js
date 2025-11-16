@@ -881,6 +881,9 @@ function toggleInput() {
 
 // 頁面載入時恢復上次的內容
 window.addEventListener('DOMContentLoaded', () => {
+    // 恢復主題設定
+    loadSavedTheme();
+
     // 恢復偽裝模式設定
     const savedDisguiseMode = localStorage.getItem('disguiseMode');
     if (savedDisguiseMode !== null) {
@@ -910,12 +913,269 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// 快捷鍵：Ctrl + H 切換輸入框
+// ==================== 鍵盤快捷鍵 ====================
+
+/**
+ * 鍵盤快捷鍵支援
+ *
+ * 快捷鍵列表：
+ * - ← / P：上一章
+ * - → / N：下一章
+ * - Space：往下捲動（PageDown）
+ * - Shift + Space：往上捲動（PageUp）
+ * - Home：回到頁面頂部
+ * - End：跳到頁面底部
+ * - Ctrl + H：切換輸入框
+ * - Ctrl + D：切換偽裝模式
+ * - Ctrl + B：加入書籤
+ */
 document.addEventListener('keydown', (e) => {
-    if (e.ctrlKey && e.key === 'h') {
-        e.preventDefault();
-        toggleInput();
+    // 如果焦點在輸入框或文字區域，不觸發快捷鍵（除了 Ctrl 組合鍵）
+    const isInputFocused = document.activeElement.tagName === 'INPUT' ||
+                          document.activeElement.tagName === 'TEXTAREA';
+
+    // Ctrl 組合鍵
+    if (e.ctrlKey) {
+        switch (e.key.toLowerCase()) {
+            case 'h':
+                e.preventDefault();
+                toggleInput();
+                break;
+            case 'd':
+                e.preventDefault();
+                toggleDisguiseMode();
+                break;
+            case 'b':
+                e.preventDefault();
+                addBookmark();
+                break;
+        }
+        return;
     }
+
+    // 如果在輸入框，其他快捷鍵不生效
+    if (isInputFocused) return;
+
+    // 方向鍵和字母鍵
+    switch (e.key) {
+        case 'ArrowLeft':
+        case 'p':
+        case 'P':
+            e.preventDefault();
+            previousChapter();
+            break;
+
+        case 'ArrowRight':
+        case 'n':
+        case 'N':
+            e.preventDefault();
+            nextChapter();
+            break;
+
+        case ' ':  // 空白鍵
+            e.preventDefault();
+            const codeArea = document.getElementById('codeArea');
+            if (e.shiftKey) {
+                // Shift + Space：往上捲動
+                codeArea.scrollTop -= window.innerHeight * 0.8;
+            } else {
+                // Space：往下捲動
+                codeArea.scrollTop += window.innerHeight * 0.8;
+            }
+            break;
+
+        case 'Home':
+            e.preventDefault();
+            document.getElementById('codeArea').scrollTop = 0;
+            window.scrollTo(0, 0);
+            break;
+
+        case 'End':
+            e.preventDefault();
+            const area = document.getElementById('codeArea');
+            area.scrollTop = area.scrollHeight;
+            break;
+    }
+});
+
+// ==================== 自動續讀模式 ====================
+
+let autoReadEnabled = false;
+let autoReadCheckInterval = null;
+
+/**
+ * 切換自動續讀模式
+ */
+function toggleAutoRead() {
+    autoReadEnabled = !autoReadEnabled;
+    const autoReadBtn = document.getElementById('autoReadBtn');
+
+    if (autoReadEnabled) {
+        // 啟動自動續讀
+        autoReadBtn.textContent = '⏸ 暫停';
+        autoReadBtn.style.backgroundColor = '#16825d';
+        startAutoReadCheck();
+        console.log('自動續讀已啟動');
+    } else {
+        // 停止自動續讀
+        autoReadBtn.textContent = '▶ 自動';
+        autoReadBtn.style.backgroundColor = '';
+        stopAutoReadCheck();
+        console.log('自動續讀已停止');
+    }
+
+    // 儲存設定
+    localStorage.setItem('autoReadEnabled', autoReadEnabled);
+}
+
+/**
+ * 開始檢查是否需要自動載入下一章
+ */
+function startAutoReadCheck() {
+    if (autoReadCheckInterval) {
+        clearInterval(autoReadCheckInterval);
+    }
+
+    // 每 2 秒檢查一次是否接近底部
+    autoReadCheckInterval = setInterval(() => {
+        if (!autoReadEnabled) return;
+
+        const codeArea = document.getElementById('codeArea');
+        const scrollTop = codeArea.scrollTop;
+        const scrollHeight = codeArea.scrollHeight;
+        const clientHeight = codeArea.clientHeight;
+
+        // 如果捲動到底部 90% 以上，自動載入下一章
+        const scrollPercentage = (scrollTop + clientHeight) / scrollHeight;
+
+        if (scrollPercentage > 0.9) {
+            console.log('接近底部，準備自動載入下一章...');
+            stopAutoReadCheck(); // 暫時停止檢查，避免重複觸發
+
+            // 延遲 3 秒後載入下一章
+            setTimeout(async () => {
+                if (autoReadEnabled && currentChapterInfo) {
+                    updateChapterInfo('自動續讀：載入下一章...');
+                    await nextChapter();
+
+                    // 載入完成後，等待 1 秒再重新開始檢查
+                    setTimeout(() => {
+                        if (autoReadEnabled) {
+                            startAutoReadCheck();
+                        }
+                    }, 1000);
+                }
+            }, 3000);
+        }
+    }, 2000);
+}
+
+/**
+ * 停止自動續讀檢查
+ */
+function stopAutoReadCheck() {
+    if (autoReadCheckInterval) {
+        clearInterval(autoReadCheckInterval);
+        autoReadCheckInterval = null;
+    }
+}
+
+// ==================== 主題切換 ====================
+
+/**
+ * 主題列表
+ */
+const themes = [
+    { id: 'vscode', name: 'VS Code', icon: '💻' },
+    { id: 'night', name: '純黑夜間', icon: '🌙' },
+    { id: 'sepia', name: '護眼棕', icon: '📜' },
+    { id: 'green', name: '護眼綠', icon: '🌿' }
+];
+
+let currentThemeIndex = 0;
+
+/**
+ * 切換到下一個主題
+ */
+function cycleTheme() {
+    currentThemeIndex = (currentThemeIndex + 1) % themes.length;
+    const theme = themes[currentThemeIndex];
+
+    // 更新 body 的 data-theme 屬性
+    if (theme.id === 'vscode') {
+        document.body.removeAttribute('data-theme');
+    } else {
+        document.body.setAttribute('data-theme', theme.id);
+    }
+
+    // 更新按鈕文字
+    const themeBtn = document.getElementById('themeBtn');
+    if (themeBtn) {
+        themeBtn.textContent = `${theme.icon} ${theme.name}`;
+    }
+
+    // 儲存主題設定
+    localStorage.setItem('selectedTheme', theme.id);
+
+    console.log('已切換到主題:', theme.name);
+}
+
+/**
+ * 載入已儲存的主題
+ */
+function loadSavedTheme() {
+    const savedTheme = localStorage.getItem('selectedTheme');
+    if (savedTheme) {
+        // 找到對應的主題索引
+        const index = themes.findIndex(t => t.id === savedTheme);
+        if (index !== -1) {
+            currentThemeIndex = index;
+            const theme = themes[currentThemeIndex];
+
+            if (theme.id !== 'vscode') {
+                document.body.setAttribute('data-theme', theme.id);
+            }
+
+            // 更新按鈕文字
+            const themeBtn = document.getElementById('themeBtn');
+            if (themeBtn) {
+                themeBtn.textContent = `${theme.icon} ${theme.name}`;
+            }
+        }
+    }
+}
+
+// ==================== 閱讀進度條 ====================
+
+/**
+ * 更新閱讀進度條
+ */
+function updateReadingProgress() {
+    const codeArea = document.getElementById('codeArea');
+    const progressFill = document.getElementById('progressFill');
+    const progressText = document.getElementById('progressText');
+
+    if (!codeArea || !progressFill || !progressText) return;
+
+    const scrollTop = codeArea.scrollTop;
+    const scrollHeight = codeArea.scrollHeight - codeArea.clientHeight;
+    const progress = scrollHeight > 0 ? (scrollTop / scrollHeight) * 100 : 0;
+
+    // 更新進度條高度
+    progressFill.style.height = `${progress}%`;
+
+    // 更新百分比文字
+    progressText.textContent = `${Math.round(progress)}%`;
+}
+
+// 監聽捲動事件
+document.getElementById('codeArea').addEventListener('scroll', updateReadingProgress);
+
+// 內容變化時也更新進度
+const progressObserver = new MutationObserver(updateReadingProgress);
+progressObserver.observe(document.getElementById('codeArea'), {
+    childList: true,
+    subtree: true
 });
 
 // ==================== 搜尋功能 ====================

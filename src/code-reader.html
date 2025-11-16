@@ -55,7 +55,9 @@
     <div class="chapter-nav" id="chapterNav">
         <button onclick="previousChapter()" id="prevBtn">← 上一章</button>
         <div style="display: flex; align-items: center; gap: 10px;">
+            <button onclick="toggleAutoRead()" style="font-size: 11px; padding: 4px 8px;" title="自動續讀" id="autoReadBtn">▶ 自動</button>
             <button onclick="toggleDisguiseMode()" style="font-size: 11px; padding: 4px 8px;" title="切換偽裝模式" id="disguiseBtn">🎭 偽裝</button>
+            <button onclick="cycleTheme()" style="font-size: 11px; padding: 4px 8px;" title="切換主題" id="themeBtn">🎨 主題</button>
             <button onclick="toggleBookmarks()" style="font-size: 11px; padding: 4px 8px;" title="書籤">📑</button>
             <button onclick="toggleHistory()" style="font-size: 11px; padding: 4px 8px;" title="歷史">📜</button>
             <button onclick="addBookmark()" style="font-size: 11px; padding: 4px 8px;" title="加入書籤">⭐</button>
@@ -77,6 +79,14 @@
             <div class="code-line"><span class="comment">// Text Processing System v2.3</span></div>
             <div class="code-line"><span class="comment">// Author: Developer Team</span></div>
             <div class="code-line"><span class="comment">// Last modified: 2025-11-13</span></div>
+        </div>
+
+        <!-- 閱讀進度條 -->
+        <div class="reading-progress" id="readingProgress">
+            <div class="progress-bar" id="progressBar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-text" id="progressText">0%</div>
         </div>
     </div>
 
