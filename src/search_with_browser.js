@@ -147,7 +147,7 @@ async function extractSearchResults(page) {
     // ✅ 添加 debug 資訊
     console.error('[DEBUG] 開始提取搜尋結果...');
 
-    return await page.evaluate(() => {
+    const extractionResult = await page.evaluate(() => {
         const results = [];
 
         // 嘗試多種選擇器（筆趣閣可能的結構）
@@ -170,16 +170,18 @@ async function extractSearchResults(page) {
             }
         }
 
-        // ✅ Debug 輸出
-        if (matchedSelector) {
-            console.error('[DEBUG] 找到搜尋結果，選擇器:', matchedSelector, '數量:', items.length);
-        } else {
-            console.error('[DEBUG] 無法使用預設選擇器找到結果，嘗試尋找 book 連結...');
-        }
+        // ✅ 將 debug 資訊回傳，而不是在瀏覽器中輸出
+        const debugInfo = {
+            matchedSelector: matchedSelector,
+            itemCount: items.length,
+            usedFallback: false
+        };
 
         // 如果沒有找到，嘗試找所有包含 book 連結的項目
         if (items.length === 0) {
+            debugInfo.usedFallback = true;
             const links = document.querySelectorAll('a[href*="/book/"]');
+            debugInfo.itemCount = links.length;
             links.forEach(link => {
                 const parent = link.closest('li, div, tr');
                 if (parent && !results.some(r => r.bookUrl === link.href)) {
@@ -222,8 +224,23 @@ async function extractSearchResults(page) {
             });
         }
 
-        return results;
+        // ✅ 回傳 results 和 debugInfo
+        return { results, debugInfo };
     });
+
+    // ✅ 在 Node.js 環境輸出 debug 資訊（這樣 PHP 可以捕獲）
+    if (extractionResult.debugInfo.matchedSelector) {
+        console.error('[DEBUG] 找到搜尋結果，選擇器:', extractionResult.debugInfo.matchedSelector,
+                      '數量:', extractionResult.debugInfo.itemCount);
+    } else if (extractionResult.debugInfo.usedFallback) {
+        console.error('[DEBUG] 無法使用預設選擇器，使用備用方案找到',
+                      extractionResult.debugInfo.itemCount, '個 book 連結');
+    } else {
+        console.error('[DEBUG] 無法找到任何搜尋結果');
+    }
+
+    // ✅ 回傳實際的搜尋結果
+    return extractionResult.results;
 }
 
 /**

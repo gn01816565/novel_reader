@@ -465,8 +465,7 @@ async function fetchChapter(url, isAutoNext = false) {
     const novelInput = document.getElementById('novelInput');
     const chapterInfo = document.getElementById('chapterInfo');
 
-    // 立即更新 URL 輸入框，顯示正在抓取的頁面
-    document.getElementById('currentUrl').value = url;
+    // ✅ 不在這裡更新 URL，等抓取成功後再更新，避免失敗時狀態不一致
 
     updateChapterInfo('正在抓取...');
     novelInput.value = '正在抓取網頁內容，請稍候...';
