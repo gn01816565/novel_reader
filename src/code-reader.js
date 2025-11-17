@@ -472,14 +472,20 @@ async function fetchChapter(url, isAutoNext = false) {
     novelInput.disabled = true;
 
     try {
+        // 建立超時控制（30 秒）
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
+
         const response = await fetch('fetch_novel.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
             },
-            body: 'url=' + encodeURIComponent(url)
+            body: 'url=' + encodeURIComponent(url),
+            signal: controller.signal
         });
 
+        clearTimeout(timeoutId);
         const result = await response.json();
         console.log('抓取結果:', result);
 
@@ -523,10 +529,23 @@ async function fetchChapter(url, isAutoNext = false) {
         }
     } catch (error) {
         console.error('抓取錯誤:', error);
+        // ✅ 始終恢復 UI 狀態，避免卡住
+        novelInput.value = '';
+        novelInput.disabled = false;
+
+        // 判斷錯誤類型並顯示適當訊息
+        let errorMsg = '抓取失敗';
+        if (error.name === 'AbortError') {
+            errorMsg = '請求超時（30秒），請檢查網路或稍後再試';
+        } else if (error.message) {
+            errorMsg = '抓取失敗：' + error.message;
+        }
+
+        // 只在非自動模式時顯示詳細錯誤訊息
         if (!isAutoNext) {
-            novelInput.value = '';
-            novelInput.disabled = false;
-            updateChapterInfo('抓取失敗：' + error.message);
+            updateChapterInfo(errorMsg);
+        } else {
+            updateChapterInfo('無法載入下一章（' + (error.name === 'AbortError' ? '超時' : '失敗') + '）');
         }
         return false;
     }
@@ -1901,14 +1920,20 @@ async function startBatchDownload() {
  */
 async function fetchChapterContent(chapterUrl) {
     try {
+        // 建立超時控制（30 秒）
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
+
         const response = await fetch('fetch_novel.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
             },
-            body: `url=${encodeURIComponent(chapterUrl)}`
+            body: `url=${encodeURIComponent(chapterUrl)}`,
+            signal: controller.signal
         });
 
+        clearTimeout(timeoutId);
         const result = await response.json();
 
         if (result.success && result.content) {
